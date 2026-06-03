@@ -1,6 +1,14 @@
 import fs from "fs";
 import path from "path";
+import dns from "dns";
 import { MongoClient } from "mongodb";
+
+// Override DNS servers to Google Public DNS to solve local ECONNREFUSED / querySrv resolution failures
+try {
+  dns.setServers(["8.8.8.8", "8.8.4.4"]);
+} catch (err) {
+  console.warn("Unable to override DNS servers, using default resolver:", err);
+}
 
 const DB_PATH = path.join(process.cwd(), "src", "data", "db.json");
 
