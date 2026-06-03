@@ -261,7 +261,7 @@ export default function LandingPage() {
             <div>
               <h4 className="font-bold text-google-blue text-sm uppercase">Creator Pro</h4>
               <div className="flex items-baseline mt-4 mb-2">
-                <span className="text-3xl font-extrabold text-[#202124]">$29</span>
+                <span className="text-3xl font-extrabold text-[#202124]">₹99</span>
                 <span className="text-xs text-slate-400 ml-1">/ month</span>
               </div>
               <p className="text-xs text-slate-500 leading-relaxed">For professional creators and brands.</p>

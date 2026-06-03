@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
 
     if (textLower.includes("price") || textLower.includes("cost") || textLower.includes("how much")) {
       const pricingLink = customVariable1 || "https://tubeflow.com/pricing";
-      aiSuggestion = `Hey ${name}! 👋 Thanks for asking. Our premium plan starts at $29/mo. You can find all the details and choose a plan here → ${pricingLink}. Let me know if you have any editing team requirements!`;
+      aiSuggestion = `Hey ${name}! 👋 Thanks for asking. Our premium plan starts at ₹99/mo. You can find all the details and choose a plan here → ${pricingLink}. Let me know if you have any editing team requirements!`;
     } else if (textLower.includes("discount") || textLower.includes("coupon") || textLower.includes("promo")) {
       const shopLink = customVariable1 || "https://tubeflow.com/shop";
       const code = customVariable2 || "YOUTUBE10";

@@ -150,9 +150,9 @@ const DEFAULT_TEMPLATES: Template[] = [
     id: "tpl-pricing",
     name: "Pricing & Plans Guide",
     emoji: "💵",
-    body: "Hey {{commenter_name}}! 👋 Our pricing starts at $29/mo. Check out our detailed pricing plans here → {{custom_variable_1}}! Let me know if you have any questions.",
+    body: "Hey {{commenter_name}}! 👋 Our pricing starts at ₹99/mo. Check out our detailed pricing plans here → {{custom_variable_1}}! Let me know if you have any questions.",
     variants: [
-      "Hey {{commenter_name}}! 👋 Our pricing starts at $29/mo. Check out our detailed pricing plans here → {{custom_variable_1}}! Let me know if you have any questions.",
+      "Hey {{commenter_name}}! 👋 Our pricing starts at ₹99/mo. Check out our detailed pricing plans here → {{custom_variable_1}}! Let me know if you have any questions.",
       "Hi {{commenter_name}}! You can find the cost details on our website here: {{custom_variable_1}} 🚀. Hope this helps!",
       "Thanks for asking, {{commenter_name}}! All plan details are listed at {{custom_variable_1}}."
     ],
