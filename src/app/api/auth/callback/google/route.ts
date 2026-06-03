@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDB, saveDB, logActivity } from "@/lib/db";
+import { cookies } from "next/headers";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const code = searchParams.get("code");
   const error = searchParams.get("error");
+  const stateParam = searchParams.get("state") || "dashboard";
 
-  const state = searchParams.get("state") || "dashboard";
+  const isLogin = stateParam.startsWith("login:");
+  const state = isLogin ? stateParam.substring(6) : stateParam;
 
   if (error) {
     console.error("OAuth error from Google:", error);
@@ -20,9 +23,9 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const db = await getDB();
-    const clientId = db.authSettings?.googleClientId || process.env.GOOGLE_CLIENT_ID;
-    const clientSecret = db.authSettings?.googleClientSecret || process.env.GOOGLE_CLIENT_SECRET;
+    const tempDb = await getDB();
+    const clientId = tempDb.authSettings?.googleClientId || process.env.GOOGLE_CLIENT_ID;
+    const clientSecret = tempDb.authSettings?.googleClientSecret || process.env.GOOGLE_CLIENT_SECRET;
     const origin = process.env.NEXT_PUBLIC_APP_URL || new URL(req.url).origin;
     const redirectUri = `${origin}/api/auth/callback/google`;
 
@@ -52,7 +55,51 @@ export async function GET(req: NextRequest) {
     const tokenData = await tokenRes.json();
     const { access_token, refresh_token } = tokenData;
 
-    // 2. Fetch Channel Metadata from YouTube API
+    // 2. Fetch User Profile Info from Google
+    const profileRes = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+      headers: { Authorization: `Bearer ${access_token}` }
+    });
+    
+    let email = "";
+    let profileName = "";
+    if (profileRes.ok) {
+      const profile = await profileRes.json();
+      email = profile.email;
+      profileName = profile.name;
+    }
+
+    if (!email) {
+      console.error("Failed to fetch email from userinfo");
+      return NextResponse.redirect(`${new URL(req.url).origin}/login?error=email_fetch_failed`);
+    }
+
+    // Set the cookie session_email for tenant identification
+    const cookieStore = await cookies();
+    cookieStore.set("session_email", email.toLowerCase().trim(), { path: "/", httpOnly: true });
+
+    // Load/create the isolated DB for this email
+    const db = await getDB(email);
+
+    // Sync session details
+    db.userSession = {
+      email: email,
+      name: profileName || email.split("@")[0],
+      tier: db.userSession?.tier || "free",
+      repliesToday: db.userSession?.repliesToday || 0,
+      lastResetDate: db.userSession?.lastResetDate || new Date().toISOString().split("T")[0]
+    };
+
+    if (isLogin) {
+      // Login flow: just log in and redirect
+      await saveDB(db, email);
+      await logActivity(db.userSession.name, "Signed in with Google");
+      
+      const hasChannels = db.channels && db.channels.length > 0;
+      const redirectDest = hasChannels ? "dashboard" : "onboarding";
+      return NextResponse.redirect(`${new URL(req.url).origin}/${redirectDest}`);
+    }
+
+    // 3. Fetch Channel Metadata from YouTube API (channel connection flow)
     const channelRes = await fetch(
       "https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&mine=true",
       {
@@ -63,11 +110,14 @@ export async function GET(req: NextRequest) {
     if (!channelRes.ok) {
       const errBody = await channelRes.text();
       console.error("YouTube Channel metadata fetch failed:", errBody);
+      // Save session details anyway
+      await saveDB(db, email);
       return NextResponse.redirect(`${new URL(req.url).origin}/dashboard/channels?error=youtube_metadata_failed`);
     }
 
     const channelData = await channelRes.json();
     if (!channelData.items || channelData.items.length === 0) {
+      await saveDB(db, email);
       return NextResponse.redirect(`${new URL(req.url).origin}/dashboard/channels?error=no_youtube_channel_found`);
     }
 
@@ -78,7 +128,7 @@ export async function GET(req: NextRequest) {
     const avatar = ytChannel.snippet.thumbnails?.default?.url || "";
     const subsCount = ytChannel.statistics?.subscriberCount;
     
-    // Format subscriber count (e.g. 1.2M or 45K)
+    // Format subscriber count
     let subscribers = "0";
     if (subsCount) {
       const num = parseInt(subsCount, 10);
@@ -91,7 +141,6 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // 3. Save or Update Channel in Database
     const existingIndex = db.channels.findIndex((c) => c.id === channelId);
     const updatedChannel = {
       id: channelId,
@@ -101,7 +150,6 @@ export async function GET(req: NextRequest) {
       status: "active" as const,
       subscribers,
       accessToken: access_token,
-      // Retain existing refresh token if Google didn't return a new one on re-auth
       refreshToken: refresh_token || (existingIndex >= 0 ? db.channels[existingIndex].refreshToken : undefined),
       automatedVideos: existingIndex >= 0 ? (db.channels[existingIndex].automatedVideos || []) : []
     };
@@ -112,18 +160,11 @@ export async function GET(req: NextRequest) {
       db.channels.push(updatedChannel);
     }
 
-    await logActivity(
-      db.userSession?.name || "System", 
-      `Linked YouTube channel: ${name} (${handle})`
-    );
+    await saveDB(db, email);
+    await logActivity(db.userSession.name, `Linked YouTube channel: ${name} (${handle})`);
 
-    await saveDB(db);
-
-    // Redirect dynamically based on source state
-    if (state === "onboarding") {
-      return NextResponse.redirect(`${new URL(req.url).origin}/onboarding?success=connected&channel=${encodeURIComponent(name)}`);
-    }
-    return NextResponse.redirect(`${new URL(req.url).origin}/dashboard/channels?success=connected&channel=${encodeURIComponent(name)}`);
+    const dest = state === "onboarding" ? "onboarding" : "dashboard/channels";
+    return NextResponse.redirect(`${new URL(req.url).origin}/${dest}?success=connected&channel=${encodeURIComponent(name)}`);
   } catch (err) {
     console.error("OAuth callback exception:", err);
     const dest = state === "onboarding" ? "onboarding" : "dashboard/channels";

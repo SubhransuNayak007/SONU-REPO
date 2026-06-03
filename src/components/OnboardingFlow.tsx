@@ -83,7 +83,14 @@ export default function OnboardingFlow() {
 
         if (settingsRes.ok) {
           const settings = await settingsRes.json();
+          if (!settings.userSession || !settings.userSession.email) {
+            router.push("/login");
+            return;
+          }
           setClientIdConfigured(!!settings.authSettings?.googleClientId || !!settings.globalOAuth);
+        } else {
+          router.push("/login");
+          return;
         }
       } catch (err) {
         console.error("Onboarding load error:", err);

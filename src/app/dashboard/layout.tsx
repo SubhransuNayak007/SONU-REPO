@@ -1,12 +1,13 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import CommandPalette from "@/components/CommandPalette";
 import { useUIStore } from "@/lib/store";
 import { AnimatePresence, motion } from "framer-motion";
-import { CheckCircle, AlertCircle, Info, X } from "lucide-react";
+import { CheckCircle, AlertCircle, Info, X, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export default function DashboardLayout({
   children,
@@ -15,6 +16,41 @@ export default function DashboardLayout({
 }) {
   const toast = useUIStore((state) => state.toast);
   const hideToast = useUIStore((state) => state.hideToast);
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function checkAuth() {
+      try {
+        const res = await fetch("/api/settings");
+        if (res.ok) {
+          const data = await res.json();
+          if (!data.userSession || !data.userSession.email) {
+            router.push("/login");
+          } else {
+            setLoading(false);
+          }
+        } else {
+          router.push("/login");
+        }
+      } catch (err) {
+        console.error("Auth check failed:", err);
+        router.push("/login");
+      }
+    }
+    checkAuth();
+  }, [router]);
+
+  if (loading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-canvas-bg font-sans">
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="h-8 w-8 animate-spin text-google-blue" />
+          <span className="text-xs font-semibold text-slate-500">Checking authorization...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-canvas-bg font-sans">

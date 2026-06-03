@@ -205,7 +205,14 @@ export default function Sidebar() {
               </div>
             </div>
             <button 
-              onClick={() => router.push("/login")}
+              onClick={async () => {
+                try {
+                  await fetch("/api/auth/logout", { method: "POST" });
+                } catch (e) {
+                  console.error("Logout failed:", e);
+                }
+                router.push("/login");
+              }}
               className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-850 hover:text-white lg:block md:hidden"
               title="Logout"
             >

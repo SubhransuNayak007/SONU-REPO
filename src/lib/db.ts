@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import dns from "dns";
 import { MongoClient } from "mongodb";
+import { cookies } from "next/headers";
 
 // Override DNS servers to Google Public DNS to solve local ECONNREFUSED / querySrv resolution failures
 try {
@@ -163,15 +164,27 @@ export interface DBData {
 const DEFAULT_TEMPLATES: Template[] = [];
 const DEFAULT_RULES: Rule[] = [];
 
-export async function getDB(): Promise<DBData> {
+export async function getDB(customEmail?: string): Promise<DBData> {
   const uri = process.env.MONGODB_URI;
+  
+  let email = customEmail || "";
+  if (!email) {
+    try {
+      const cookieStore = await cookies();
+      email = cookieStore.get("session_email")?.value || "";
+    } catch (e) {
+      // not in request context
+    }
+  }
+
+  const docId = email ? `user_${email.toLowerCase().trim()}` : "global_db_state";
   
   if (uri) {
     try {
       const client = await getMongoClient();
       const db = client.db("tubeflow");
       const collection = db.collection("state");
-      const document = await collection.findOne({ _id: "global_db_state" as any });
+      const document = await collection.findOne({ _id: docId as any });
 
       if (document) {
         const { _id, ...rest } = document;
@@ -180,8 +193,8 @@ export async function getDB(): Promise<DBData> {
 
         if (!parsed.userSession) {
           parsed.userSession = {
-            email: "",
-            name: "Creator",
+            email: email,
+            name: email ? (email.split("@")[0].charAt(0).toUpperCase() + email.split("@")[0].slice(1)) : "Creator",
             tier: "free",
             repliesToday: 0,
             lastResetDate: new Date().toISOString().split("T")[0]
@@ -210,22 +223,22 @@ export async function getDB(): Promise<DBData> {
         }
 
         if (dirty) {
-          await saveDB(parsed);
+          await saveDB(parsed, email);
         }
 
         return parsed;
       } else {
         // Document not found in Mongo, seed default structure
         const defaultData: DBData = {
-          workspace: { name: "My Workspace", members: [], settings: { dailyReplyQuota: 500, blockedUsers: [], spamProtection: true, slackWebhook: "", emailDigest: "weekly" } },
+          workspace: { name: email ? `${email.split("@")[0].charAt(0).toUpperCase() + email.split("@")[0].slice(1)}'s Workspace` : "My Workspace", members: [], settings: { dailyReplyQuota: 500, blockedUsers: [], spamProtection: true, slackWebhook: "", emailDigest: "weekly" } },
           channels: [],
           templates: [],
           rules: [],
           comments: [],
           activityLogs: [],
           userSession: {
-            email: "",
-            name: "Creator",
+            email: email,
+            name: email ? (email.split("@")[0].charAt(0).toUpperCase() + email.split("@")[0].slice(1)) : "Creator",
             tier: "free",
             repliesToday: 0,
             lastResetDate: new Date().toISOString().split("T")[0]
@@ -236,7 +249,7 @@ export async function getDB(): Promise<DBData> {
           },
           coupons: []
         };
-        await saveDB(defaultData);
+        await saveDB(defaultData, email);
         return defaultData;
       }
     } catch (err) {
@@ -246,17 +259,20 @@ export async function getDB(): Promise<DBData> {
 
   // Local fallback
   try {
-    if (!fs.existsSync(DB_PATH)) {
+    const fileSuffix = email ? `_${email.toLowerCase().replace(/[^a-z0-9_]/g, "_")}` : "";
+    const customDbPath = path.join(process.cwd(), "src", "data", `db${fileSuffix}.json`);
+
+    if (!fs.existsSync(customDbPath)) {
       const defaultData: DBData = {
-        workspace: { name: "My Workspace", members: [], settings: { dailyReplyQuota: 500, blockedUsers: [], spamProtection: true, slackWebhook: "", emailDigest: "weekly" } },
+        workspace: { name: email ? `${email.split("@")[0].charAt(0).toUpperCase() + email.split("@")[0].slice(1)}'s Workspace` : "My Workspace", members: [], settings: { dailyReplyQuota: 500, blockedUsers: [], spamProtection: true, slackWebhook: "", emailDigest: "weekly" } },
         channels: [],
         templates: [],
         rules: [],
         comments: [],
         activityLogs: [],
         userSession: {
-          email: "",
-          name: "Creator",
+          email: email,
+          name: email ? (email.split("@")[0].charAt(0).toUpperCase() + email.split("@")[0].slice(1)) : "Creator",
           tier: "free",
           repliesToday: 0,
           lastResetDate: new Date().toISOString().split("T")[0]
@@ -267,18 +283,18 @@ export async function getDB(): Promise<DBData> {
         },
         coupons: []
       };
-      fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
-      fs.writeFileSync(DB_PATH, JSON.stringify(defaultData, null, 2), "utf8");
+      fs.mkdirSync(path.dirname(customDbPath), { recursive: true });
+      fs.writeFileSync(customDbPath, JSON.stringify(defaultData, null, 2), "utf8");
       return defaultData;
     }
-    const raw = fs.readFileSync(DB_PATH, "utf8");
+    const raw = fs.readFileSync(customDbPath, "utf8");
     const parsed = JSON.parse(raw) as DBData;
 
     let dirty = false;
     if (!parsed.userSession) {
       parsed.userSession = {
-        email: "",
-        name: "Creator",
+        email: email,
+        name: email ? (email.split("@")[0].charAt(0).toUpperCase() + email.split("@")[0].slice(1)) : "Creator",
         tier: "free",
         repliesToday: 0,
         lastResetDate: new Date().toISOString().split("T")[0]
@@ -305,7 +321,7 @@ export async function getDB(): Promise<DBData> {
     }
 
     if (dirty) {
-      fs.writeFileSync(DB_PATH, JSON.stringify(parsed, null, 2), "utf8");
+      fs.writeFileSync(customDbPath, JSON.stringify(parsed, null, 2), "utf8");
     }
 
     return parsed;
@@ -319,8 +335,8 @@ export async function getDB(): Promise<DBData> {
       comments: [],
       activityLogs: [],
       userSession: {
-        email: "",
-        name: "Creator",
+        email: email,
+        name: email ? (email.split("@")[0].charAt(0).toUpperCase() + email.split("@")[0].slice(1)) : "Creator",
         tier: "free",
         repliesToday: 0,
         lastResetDate: new Date().toISOString().split("T")[0]
@@ -334,8 +350,20 @@ export async function getDB(): Promise<DBData> {
   }
 }
 
-export async function saveDB(data: DBData): Promise<boolean> {
+export async function saveDB(data: DBData, customEmail?: string): Promise<boolean> {
   const uri = process.env.MONGODB_URI;
+
+  let email = customEmail || data.userSession?.email || "";
+  if (!email) {
+    try {
+      const cookieStore = await cookies();
+      email = cookieStore.get("session_email")?.value || "";
+    } catch (e) {
+      // not in request context
+    }
+  }
+
+  const docId = email ? `user_${email.toLowerCase().trim()}` : "global_db_state";
 
   if (uri) {
     try {
@@ -343,8 +371,8 @@ export async function saveDB(data: DBData): Promise<boolean> {
       const db = client.db("tubeflow");
       const collection = db.collection("state");
       await collection.replaceOne(
-        { _id: "global_db_state" as any },
-        { ...data, _id: "global_db_state" as any },
+        { _id: docId as any },
+        { ...data, _id: docId as any },
         { upsert: true }
       );
       return true;
@@ -355,11 +383,13 @@ export async function saveDB(data: DBData): Promise<boolean> {
 
   // Local fallback
   try {
-    const dir = path.dirname(DB_PATH);
+    const fileSuffix = email ? `_${email.toLowerCase().replace(/[^a-z0-9_]/g, "_")}` : "";
+    const customDbPath = path.join(process.cwd(), "src", "data", `db${fileSuffix}.json`);
+    const dir = path.dirname(customDbPath);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
-    fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2), "utf8");
+    fs.writeFileSync(customDbPath, JSON.stringify(data, null, 2), "utf8");
     return true;
   } catch (err) {
     console.error("Failed to write to DB file:", err);
@@ -368,7 +398,13 @@ export async function saveDB(data: DBData): Promise<boolean> {
 }
 
 export async function logActivity(user: string, action: string) {
-  const db = await getDB();
+  let email = "";
+  try {
+    const cookieStore = await cookies();
+    email = cookieStore.get("session_email")?.value || "";
+  } catch (e) {}
+
+  const db = await getDB(email);
   const newLog: ActivityLog = {
     id: `log-${Date.now()}`,
     user: user || "Creator",
@@ -379,5 +415,5 @@ export async function logActivity(user: string, action: string) {
   if (db.activityLogs.length > 100) {
     db.activityLogs = db.activityLogs.slice(0, 100);
   }
-  await saveDB(db);
+  await saveDB(db, email);
 }
