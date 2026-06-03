@@ -41,7 +41,7 @@ yarn-error.log*
 next-env.d.ts
 
 # local databases containing active credentials
-/src/data/db.json
+/src/data/*.json
 
 # Local Netlify folder
 .netlify

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDB, saveDB, logActivity } from "@/lib/db";
+import { postCommentReply } from "@/lib/youtube";
 
 export async function POST(
   req: NextRequest,
@@ -19,6 +20,9 @@ export async function POST(
 
     const comment = db.comments[index];
     const finalReplyText = autoReplyText || comment.autoReplyText || "Thank you for commenting!";
+
+    // Call official YouTube API to post comment reply
+    await postCommentReply(comment.channelId, comment.id, finalReplyText);
 
     db.comments[index] = {
       ...comment,

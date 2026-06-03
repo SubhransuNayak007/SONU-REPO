@@ -46,6 +46,7 @@ export interface WorkspaceSettings {
   spamProtection: boolean;
   slackWebhook: string;
   emailDigest: string;
+  negativeKeywords?: string;
 }
 
 export interface Workspace {
@@ -103,6 +104,7 @@ export interface Rule {
   customVariable1: string;
   customVariable2: string;
   customVariable3: string;
+  approvalMode?: "autonomous" | "review";
 }
 
 export interface Comment {
@@ -121,6 +123,7 @@ export interface Comment {
   delayRemainingSeconds: number;
   autoReplyText: string | null;
   replyFiredAt: string | null;
+  matchedAt?: string;
 }
 
 export interface ActivityLog {
@@ -138,10 +141,6 @@ export interface UserSession {
   lastResetDate: string;
 }
 
-export interface AuthSettings {
-  googleClientId: string;
-  googleClientSecret: string;
-}
 
 export interface Coupon {
   code: string;
@@ -157,7 +156,6 @@ export interface DBData {
   comments: Comment[];
   activityLogs: ActivityLog[];
   userSession?: UserSession;
-  authSettings?: AuthSettings;
   coupons?: Coupon[];
 }
 
@@ -202,16 +200,14 @@ export async function getDB(customEmail?: string): Promise<DBData> {
           dirty = true;
         }
 
-        if (!parsed.authSettings) {
-          parsed.authSettings = {
-            googleClientId: "",
-            googleClientSecret: ""
-          };
-          dirty = true;
-        }
 
         if (!parsed.coupons) {
           parsed.coupons = [];
+          dirty = true;
+        }
+
+        if (parsed.workspace?.settings && parsed.workspace.settings.negativeKeywords === undefined) {
+          parsed.workspace.settings.negativeKeywords = "scam, refund, disappointed, hate, fake, bot, report";
           dirty = true;
         }
 
@@ -230,7 +226,7 @@ export async function getDB(customEmail?: string): Promise<DBData> {
       } else {
         // Document not found in Mongo, seed default structure
         const defaultData: DBData = {
-          workspace: { name: email ? `${email.split("@")[0].charAt(0).toUpperCase() + email.split("@")[0].slice(1)}'s Workspace` : "My Workspace", members: [], settings: { dailyReplyQuota: 500, blockedUsers: [], spamProtection: true, slackWebhook: "", emailDigest: "weekly" } },
+          workspace: { name: email ? `${email.split("@")[0].charAt(0).toUpperCase() + email.split("@")[0].slice(1)}'s Workspace` : "My Workspace", members: [], settings: { dailyReplyQuota: 500, blockedUsers: [], spamProtection: true, slackWebhook: "", emailDigest: "weekly", negativeKeywords: "scam, refund, disappointed, hate, fake, bot, report" } },
           channels: [],
           templates: [],
           rules: [],
@@ -242,10 +238,6 @@ export async function getDB(customEmail?: string): Promise<DBData> {
             tier: "free",
             repliesToday: 0,
             lastResetDate: new Date().toISOString().split("T")[0]
-          },
-          authSettings: {
-            googleClientId: "",
-            googleClientSecret: ""
           },
           coupons: []
         };
@@ -264,7 +256,7 @@ export async function getDB(customEmail?: string): Promise<DBData> {
 
     if (!fs.existsSync(customDbPath)) {
       const defaultData: DBData = {
-        workspace: { name: email ? `${email.split("@")[0].charAt(0).toUpperCase() + email.split("@")[0].slice(1)}'s Workspace` : "My Workspace", members: [], settings: { dailyReplyQuota: 500, blockedUsers: [], spamProtection: true, slackWebhook: "", emailDigest: "weekly" } },
+        workspace: { name: email ? `${email.split("@")[0].charAt(0).toUpperCase() + email.split("@")[0].slice(1)}'s Workspace` : "My Workspace", members: [], settings: { dailyReplyQuota: 500, blockedUsers: [], spamProtection: true, slackWebhook: "", emailDigest: "weekly", negativeKeywords: "scam, refund, disappointed, hate, fake, bot, report" } },
         channels: [],
         templates: [],
         rules: [],
@@ -276,10 +268,6 @@ export async function getDB(customEmail?: string): Promise<DBData> {
           tier: "free",
           repliesToday: 0,
           lastResetDate: new Date().toISOString().split("T")[0]
-        },
-        authSettings: {
-          googleClientId: "",
-          googleClientSecret: ""
         },
         coupons: []
       };
@@ -301,15 +289,13 @@ export async function getDB(customEmail?: string): Promise<DBData> {
       };
       dirty = true;
     }
-    if (!parsed.authSettings) {
-      parsed.authSettings = {
-        googleClientId: "",
-        googleClientSecret: ""
-      };
-      dirty = true;
-    }
     if (!parsed.coupons) {
       parsed.coupons = [];
+      dirty = true;
+    }
+
+    if (parsed.workspace?.settings && parsed.workspace.settings.negativeKeywords === undefined) {
+      parsed.workspace.settings.negativeKeywords = "scam, refund, disappointed, hate, fake, bot, report";
       dirty = true;
     }
 
@@ -328,7 +314,7 @@ export async function getDB(customEmail?: string): Promise<DBData> {
   } catch (err) {
     console.error("Failed to read DB file:", err);
     return {
-      workspace: { name: "Error Workspace", members: [], settings: { dailyReplyQuota: 100, blockedUsers: [], spamProtection: true, slackWebhook: "", emailDigest: "weekly" } },
+      workspace: { name: "Error Workspace", members: [], settings: { dailyReplyQuota: 100, blockedUsers: [], spamProtection: true, slackWebhook: "", emailDigest: "weekly", negativeKeywords: "scam, refund, disappointed, hate, fake, bot, report" } },
       channels: [],
       templates: [],
       rules: [],
@@ -340,10 +326,6 @@ export async function getDB(customEmail?: string): Promise<DBData> {
         tier: "free",
         repliesToday: 0,
         lastResetDate: new Date().toISOString().split("T")[0]
-      },
-      authSettings: {
-        googleClientId: "",
-        googleClientSecret: ""
       },
       coupons: []
     };

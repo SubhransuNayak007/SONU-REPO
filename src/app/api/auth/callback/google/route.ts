@@ -23,9 +23,8 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const tempDb = await getDB();
-    const clientId = tempDb.authSettings?.googleClientId || process.env.GOOGLE_CLIENT_ID;
-    const clientSecret = tempDb.authSettings?.googleClientSecret || process.env.GOOGLE_CLIENT_SECRET;
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
     const origin = process.env.NEXT_PUBLIC_APP_URL || new URL(req.url).origin;
     const redirectUri = `${origin}/api/auth/callback/google`;
 

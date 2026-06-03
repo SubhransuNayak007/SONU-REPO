@@ -6,7 +6,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const adminPass = searchParams.get("adminPass");
 
-  if (adminPass !== "12wetyukjlo9") {
+  if (adminPass !== "4redfglpo098.;") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
 
     // 1. Coupon Generation (Admin)
     if (body.adminPass) {
-      if (body.adminPass !== "12wetyukjlo9") {
+      if (body.adminPass !== "4redfglpo098.;") {
         return NextResponse.json({ error: "Invalid admin password" }, { status: 401 });
       }
 

@@ -6,9 +6,7 @@ export async function GET() {
   return NextResponse.json({
     workspace: db.workspace,
     activityLogs: db.activityLogs,
-    userSession: db.userSession,
-    authSettings: db.authSettings,
-    globalOAuth: !!process.env.GOOGLE_CLIENT_ID
+    userSession: db.userSession
   });
 }
 
@@ -35,12 +33,6 @@ export async function PUT(req: NextRequest) {
       };
     }
 
-    if (body.authSettings) {
-      db.authSettings = {
-        ...db.authSettings,
-        ...body.authSettings
-      };
-    }
 
     await saveDB(db);
     await logActivity(db.userSession?.name || "Creator", "Updated workspace configuration parameters");
@@ -48,8 +40,7 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ 
       success: true, 
       workspace: db.workspace,
-      userSession: db.userSession,
-      authSettings: db.authSettings
+      userSession: db.userSession
     });
   } catch (err) {
     console.error("API error:", err);

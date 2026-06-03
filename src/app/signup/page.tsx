@@ -13,7 +13,7 @@ const GoogleLogo = () => (
   </svg>
 );
 
-export default function LoginPage() {
+export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -31,7 +31,7 @@ export default function LoginPage() {
     }
   }, []);
 
-  const handleGoogleLogin = () => {
+  const handleGoogleSignup = () => {
     setLoading(true);
     window.location.href = "/api/auth/google?login=true";
   };
@@ -51,7 +51,7 @@ export default function LoginPage() {
           </Link>
           
           <h2 className="font-display text-xl font-bold text-[#202124]">
-            Sign in to TubeFlow
+            Create your TubeFlow Account
           </h2>
           <p className="text-xs text-slate-500 mt-1">
             to connect your YouTube channels and manage automation
@@ -66,7 +66,7 @@ export default function LoginPage() {
 
         <div className="space-y-4">
           <button
-            onClick={handleGoogleLogin}
+            onClick={handleGoogleSignup}
             disabled={loading}
             className="flex w-full items-center justify-center rounded-full border border-slate-200 bg-white hover:bg-slate-50 px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition disabled:opacity-50 active:scale-98 cursor-pointer"
           >
@@ -78,15 +78,15 @@ export default function LoginPage() {
             ) : (
               <>
                 <GoogleLogo />
-                Sign in with Google
+                Sign up with Google
               </>
             )}
           </button>
           
           <div className="text-center text-xs text-slate-550 mt-4">
-            New here?{" "}
-            <Link href="/signup" className="text-google-blue font-semibold hover:underline">
-              Create account
+            Already have an account?{" "}
+            <Link href="/login" className="text-google-blue font-semibold hover:underline">
+              Sign in
             </Link>
           </div>
         </div>

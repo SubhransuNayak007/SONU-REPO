@@ -8,15 +8,12 @@ import {
   Youtube, 
   CheckCircle, 
   Sliders, 
-  Users, 
   ArrowRight, 
   Sparkles, 
-  UserPlus, 
   Play, 
-  Mail,
   Loader2,
   Lock,
-  AlertTriangle
+  Shield
 } from "lucide-react";
 
 export default function OnboardingFlow() {
@@ -29,16 +26,13 @@ export default function OnboardingFlow() {
   const [loading, setLoading] = useState(false);
   const [channelConnected, setChannelConnected] = useState(false);
   const [connectedChannelInfo, setConnectedChannelInfo] = useState<any>(null);
-  const [clientIdConfigured, setClientIdConfigured] = useState(false);
   
   // First Rule Data
   const [ruleName, setRuleName] = useState("Pricing Keywords");
   const [keywords, setKeywords] = useState("price, cost, how much");
   const [replyBody, setReplyBody] = useState("Hey {{commenter_name}}! Thanks for asking. Our basic package is $29/mo. Check details at https://tubeflow.com/pricing! 👋");
 
-  // Team Invite Data
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [invitedMembers, setInvitedMembers] = useState<string[]>([]);
+
 
   // Simulation Comment State for Step 3
   const [simState, setSimState] = useState<"idle" | "countdown" | "replied">("idle");
@@ -64,7 +58,7 @@ export default function OnboardingFlow() {
     }
   }, [showToast, triggerRefresh]);
 
-  // Fetch connected channels & settings details
+  // Fetch connected channels
   useEffect(() => {
     async function loadOnboardingData() {
       try {
@@ -87,7 +81,6 @@ export default function OnboardingFlow() {
             router.push("/login");
             return;
           }
-          setClientIdConfigured(!!settings.authSettings?.googleClientId || !!settings.globalOAuth);
         } else {
           router.push("/login");
           return;
@@ -170,34 +163,7 @@ export default function OnboardingFlow() {
     }, 1000);
   };
 
-  const handleInvite = async () => {
-    if (!inviteEmail) return;
-    setLoading(true);
-    try {
-      const res = await fetch("/api/settings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: inviteEmail,
-          role: "Editor"
-        })
-      });
 
-      if (res.ok) {
-        setInvitedMembers([...invitedMembers, inviteEmail]);
-        setInviteEmail("");
-        showToast(`Invitation sent to ${inviteEmail}`, "success");
-        triggerRefresh();
-      } else {
-        const data = await res.json();
-        showToast(data.error || "Failed to send invitation", "error");
-      }
-    } catch (err) {
-      console.error("Invite error:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleFinishOnboarding = () => {
     showToast("Workspace onboarding completed!", "success");
@@ -220,10 +186,9 @@ export default function OnboardingFlow() {
             <span className={dotClass(1)} />
             <span className={dotClass(2)} />
             <span className={dotClass(3)} />
-            <span className={dotClass(4)} />
           </div>
           <span className="text-xs font-semibold text-slate-500 font-display">
-            STEP {step} OF 4
+            STEP {step} OF 3
           </span>
         </div>
 
@@ -251,37 +216,22 @@ export default function OnboardingFlow() {
 
               {!channelConnected ? (
                 <div className="rounded-xl border border-slate-100 bg-slate-50 p-6 flex flex-col items-center text-center">
-                  {clientIdConfigured ? (
-                    <>
-                      <div className="mb-4 h-16 w-32 border border-slate-200 bg-white rounded-lg flex items-center justify-center text-slate-400 font-semibold text-xs shadow-sm">
-                        YouTube API v3
-                      </div>
-                      
-                      <button
-                        onClick={handleOAuthConnect}
-                        className="flex w-full items-center justify-center gap-2 rounded-full bg-google-blue hover:bg-google-blue-pressed px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition active:scale-95 cursor-pointer"
-                      >
-                        <Lock className="h-4 w-4 text-white" />
-                        Link Google / YouTube Account
-                      </button>
-                    </>
-                  ) : (
-                    <div className="w-full text-left bg-amber-50 border border-amber-200 p-4 rounded-xl text-xs space-y-2">
-                      <div className="flex items-center gap-2 text-amber-800 font-bold">
-                        <AlertTriangle className="h-4.5 w-4.5 text-amber-600" />
-                        <span>Google Client Credentials Required</span>
-                      </div>
-                      <p className="text-slate-650 leading-relaxed">
-                        To connect a real channel via OAuth, you must first input your **Google Client ID** and **Client Secret** in Settings.
-                      </p>
-                      <button
-                        onClick={() => router.push("/dashboard/settings")}
-                        className="text-google-blue font-bold hover:underline block"
-                      >
-                        Open Workspace Settings →
-                      </button>
-                    </div>
-                  )}
+                  <div className="mb-4 h-16 w-32 border border-slate-200 bg-white rounded-lg flex items-center justify-center text-slate-400 font-semibold text-xs shadow-sm">
+                    YouTube API v3
+                  </div>
+                  
+                  <button
+                    onClick={handleOAuthConnect}
+                    className="flex w-full items-center justify-center gap-2 rounded-full bg-google-blue hover:bg-google-blue-pressed px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition active:scale-95 cursor-pointer"
+                  >
+                    <Lock className="h-4 w-4 text-white" />
+                    Link Google / YouTube Account
+                  </button>
+
+                  <div className="flex items-start gap-1.5 mt-4 text-[10px] text-slate-450 leading-relaxed">
+                    <Shield className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                    <p>We never store your password. YouTube access can be revoked anytime from your <a href="https://myaccount.google.com/permissions" target="_blank" rel="noreferrer" className="text-google-blue font-semibold hover:underline">Google account settings</a>.</p>
+                  </div>
                 </div>
               ) : (
                 <div className="rounded-xl border border-green-200 bg-green-50/50 p-5 flex items-center justify-between">
@@ -524,91 +474,17 @@ export default function OnboardingFlow() {
                 </button>
                 <button
                   disabled={simState !== "replied"}
-                  onClick={() => setStep(4)}
+                  onClick={handleFinishOnboarding}
                   className="inline-flex items-center gap-1 rounded-full bg-google-blue hover:bg-google-blue-pressed text-xs font-semibold text-white px-5 py-2 disabled:opacity-50 transition"
                 >
-                  Invite Your Team
-                  <ArrowRight className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            </motion.div>
-          )}
-
-          {step === 4 && (
-            <motion.div
-              key="step-4"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.2 }}
-              className="space-y-6"
-            >
-              <div className="text-center">
-                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-yellow-50 text-accent-warning border border-yellow-250">
-                  <Users className="h-8 w-8" />
-                </div>
-                <h2 className="font-display text-xl font-bold text-[#202124]">
-                  Collaborate with your team
-                </h2>
-                <p className="text-sm text-slate-500 mt-1">
-                  Invite your operators, channel managers, or agencies to join the workspace.
-                </p>
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <Mail className="absolute left-3 top-2.5 h-4.5 w-4.5 text-slate-400" />
-                    <input
-                      type="email"
-                      value={inviteEmail}
-                      onChange={(e) => setInviteEmail(e.target.value)}
-                      placeholder="teammate@company.com"
-                      className="w-full rounded-full border border-slate-200 pl-10 pr-4 py-2 text-xs outline-none focus:border-google-blue"
-                    />
-                  </div>
-                  <button
-                    disabled={loading || !inviteEmail}
-                    onClick={handleInvite}
-                    className="rounded-full bg-slate-900 hover:bg-slate-800 text-xs font-semibold text-white px-5 py-2 transition shrink-0 inline-flex items-center gap-1 disabled:opacity-50"
-                  >
-                    <UserPlus className="h-3.5 w-3.5" />
-                    Invite
-                  </button>
-                </div>
-
-                {invitedMembers.length > 0 && (
-                  <div className="rounded-xl border border-slate-100 bg-slate-50 p-4">
-                    <span className="text-[10px] font-semibold uppercase text-slate-400 block mb-2">Pending Invites</span>
-                    <div className="space-y-2">
-                      {invitedMembers.map((email, idx) => (
-                        <div key={idx} className="flex items-center justify-between bg-white px-3 py-1.5 rounded-lg border border-slate-150 text-xs">
-                          <span className="text-slate-700 font-medium">{email}</span>
-                          <span className="text-[10px] text-google-blue bg-blue-50 px-2 py-0.5 rounded-full font-semibold">Editor (Pending)</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex justify-between items-center pt-4 border-t border-slate-100">
-                <button
-                  onClick={handleFinishOnboarding}
-                  className="text-xs font-semibold text-slate-400 hover:text-slate-600"
-                >
-                  Skip for now
-                </button>
-                <button
-                  onClick={handleFinishOnboarding}
-                  className="inline-flex items-center gap-1 rounded-full bg-google-blue hover:bg-google-blue-pressed text-xs font-semibold text-white px-6 py-2.5 transition active:scale-95 shadow-sm"
-                >
-                  Finish & Go to Dashboard
+                  Go to Dashboard
                   <CheckCircle className="h-3.5 w-3.5" />
                 </button>
               </div>
             </motion.div>
           )}
+
+
         </AnimatePresence>
       </div>
     </div>

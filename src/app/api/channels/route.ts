@@ -71,3 +71,32 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Failed to connect channel" }, { status: 500 });
   }
 }
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const { channelId } = body;
+
+    if (!channelId) {
+      return NextResponse.json({ error: "Missing channelId" }, { status: 400 });
+    }
+
+    const db = await getDB();
+    const chIdx = db.channels.findIndex((c) => c.id === channelId);
+
+    if (chIdx === -1) {
+      return NextResponse.json({ error: "Channel not found" }, { status: 404 });
+    }
+
+    const channelName = db.channels[chIdx].name;
+    db.channels.splice(chIdx, 1);
+    await saveDB(db);
+
+    await logActivity(db.userSession?.name || "Creator", `Disconnected YouTube channel: ${channelName}`);
+
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error("API error:", err);
+    return NextResponse.json({ error: "Failed to disconnect channel" }, { status: 500 });
+  }
+}

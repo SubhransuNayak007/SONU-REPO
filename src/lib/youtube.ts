@@ -1,12 +1,5 @@
-import { getDB, saveDB, Channel } from "./db";
+import { getDB, saveDB } from "./db";
 
-// Helper to get client credentials from db or env
-async function getGoogleCredentials() {
-  const db = await getDB();
-  const clientId = db.authSettings?.googleClientId || process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = db.authSettings?.googleClientSecret || process.env.GOOGLE_CLIENT_SECRET;
-  return { clientId, clientSecret };
-}
 
 // Refresh Google OAuth Access Token
 export async function getFreshAccessToken(channelId: string): Promise<string | null> {
@@ -22,9 +15,10 @@ export async function getFreshAccessToken(channelId: string): Promise<string | n
     return accessToken || null;
   }
 
-  const { clientId, clientSecret } = await getGoogleCredentials();
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
   if (!clientId || !clientSecret) {
-    console.error("Missing Google Client ID or Secret for token refresh");
+    console.error("Missing Google OAuth credentials for token refresh");
     return accessToken || null;
   }
 

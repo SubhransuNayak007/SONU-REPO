@@ -539,21 +539,28 @@ export default function RuleBuilderForm({ ruleId }: RuleBuilderFormProps) {
           </div>
 
           <div className="space-y-4">
-            {/* Variable insertion toolbar */}
+            {/* Variable insertion dropdown */}
             <div className="space-y-1.5">
-              <span className="text-[10px] font-semibold uppercase text-slate-400 block">Insert Dynamic Variables</span>
-              <div className="flex flex-wrap gap-1.5">
-                {variables.map((v) => (
-                  <button
-                    key={v.placeholder}
-                    type="button"
-                    onClick={() => insertVariable(v.placeholder)}
-                    className="inline-flex items-center rounded-full bg-slate-50 hover:bg-slate-100 px-2.5 py-1 text-[10px] font-semibold text-slate-600 border border-slate-200 shadow-sm transition active:scale-95"
-                  >
-                    {v.label}
-                  </button>
-                ))}
-              </div>
+              <label className="text-[10px] font-bold uppercase text-slate-400 block">Insert Dynamic Variables</label>
+              <select
+                onChange={(e) => {
+                  if (e.target.value) {
+                    insertVariable(e.target.value);
+                    e.target.value = ""; // Reset
+                  }
+                }}
+                className="w-full max-w-xs rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 outline-none focus:border-google-blue font-semibold"
+                defaultValue=""
+              >
+                <option value="" disabled>Select personalization variable...</option>
+                <option value="{{commenter_name}}">{"{{commenter_name}}"} - The person who commented</option>
+                <option value="{{video_title}}">{"{{video_title}}"} - Current video title</option>
+                <option value="{{channel_name}}">{"{{channel_name}}"} - Your channel name</option>
+                <option value="{{reply_date}}">{"{{reply_date}}"} - Today's date</option>
+                <option value="{{custom_variable_1}}">{"{{custom_variable_1}}"} - Custom Variable 1 (Link)</option>
+                <option value="{{custom_variable_2}}">{"{{custom_variable_2}}"} - Custom Variable 2 (Code)</option>
+                <option value="{{custom_variable_3}}">{"{{custom_variable_3}}"} - Custom Variable 3 (Contact)</option>
+              </select>
             </div>
 
             {/* Response edit box */}
@@ -567,6 +574,25 @@ export default function RuleBuilderForm({ ruleId }: RuleBuilderFormProps) {
                 placeholder="Compose your reply body..."
                 className="w-full rounded-xl border border-slate-200 p-3 text-xs outline-none focus:border-google-blue focus:ring-2 focus:ring-google-blue/15 font-sans leading-relaxed"
               />
+            </div>
+
+            {/* Live Preview block */}
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold uppercase text-slate-400 block">Live Preview</label>
+              <div className="rounded-xl border border-slate-150 bg-slate-50 p-3.5 text-xs text-slate-650 font-sans leading-relaxed italic">
+                {replyTextPreview ? (
+                  replyTextPreview
+                    .replace(/\{\{commenter_name\}\}/g, "John Doe")
+                    .replace(/\{\{video_title\}\}/g, "My Latest Video Stream")
+                    .replace(/\{\{channel_name\}\}/g, "My Channel Title")
+                    .replace(/\{\{reply_date\}\}/g, new Date().toLocaleDateString())
+                    .replace(/\{\{custom_variable_1\}\}/g, customVar1 || "")
+                    .replace(/\{\{custom_variable_2\}\}/g, customVar2 || "")
+                    .replace(/\{\{custom_variable_3\}\}/g, customVar3 || "")
+                ) : (
+                  <span className="text-slate-400">Compose your template reply to view live preview...</span>
+                )}
+              </div>
             </div>
 
             {/* Custom Variables definitions */}

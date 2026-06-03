@@ -27,6 +27,10 @@ export default function Header() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [logs, setLogs] = useState<any[]>([]);
 
+  // Usage bar state
+  const [usage, setUsage] = useState<{ used: number; limit: number | null; tier: string; isUnlimited: boolean; remaining: number | null } | null>(null);
+  const [upgradeDismissed, setUpgradeDismissed] = useState(false);
+
   // Fetch activity logs
   useEffect(() => {
     async function fetchLogs() {
@@ -41,6 +45,27 @@ export default function Header() {
       }
     }
     fetchLogs();
+  }, [refreshTrigger]);
+
+  // Fetch daily usage stats
+  useEffect(() => {
+    async function fetchUsage() {
+      try {
+        const res = await fetch("/api/usage/today");
+        if (res.ok) {
+          const data = await res.json();
+          setUsage(data);
+        }
+      } catch (err) {
+        console.error("Error fetching usage:", err);
+      }
+    }
+    fetchUsage();
+    // Check dismissed state from localStorage
+    const dismissed = localStorage.getItem("tf_upgrade_dismissed");
+    if (dismissed === new Date().toISOString().split("T")[0]) {
+      setUpgradeDismissed(true);
+    }
   }, [refreshTrigger]);
 
   // Keyboard shortcut listener for Command Palette (Ctrl+K or Cmd+K)
@@ -130,6 +155,48 @@ export default function Header() {
       {/* Right: Health Ticker & Quick actions */}
       <div className="flex items-center gap-2.5">
         <div className="hidden lg:flex items-center gap-2 border-r border-[#dadce0] pr-4 mr-2">
+          {/* Daily Usage Indicator */}
+          {usage && !usage.isUnlimited && usage.limit && (
+            <div className="flex items-center gap-2" title={`${usage.used} of ${usage.limit} auto-replies used today`}>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] font-medium text-[#5f6368]">
+                  Replies:
+                </span>
+                <div className="w-20 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${
+                      (usage.used / usage.limit) >= 1 ? 'bg-red-500' :
+                      (usage.used / usage.limit) >= 0.7 ? 'bg-amber-500' :
+                      'bg-accent-success'
+                    }`}
+                    style={{ width: `${Math.min(100, (usage.used / usage.limit) * 100)}%` }}
+                  />
+                </div>
+                <span className={`text-[11px] font-bold ${
+                  (usage.used / usage.limit) >= 1 ? 'text-red-600' :
+                  (usage.used / usage.limit) >= 0.7 ? 'text-amber-600' :
+                  'text-slate-700'
+                }`}>
+                  {usage.used}/{usage.limit}
+                </span>
+              </div>
+              {usage.used >= usage.limit && !upgradeDismissed && (
+                <button
+                  onClick={() => router.push("/#pricing")}
+                  className="text-[9px] font-bold bg-gradient-to-r from-google-blue to-blue-600 text-white rounded-full px-2 py-0.5 hover:shadow-md transition-all animate-pulse"
+                >
+                  Upgrade
+                </button>
+              )}
+            </div>
+          )}
+          {usage && usage.isUnlimited && (
+            <div className="flex items-center gap-1 text-[11px] font-medium text-accent-success">
+              <span className="h-1.5 w-1.5 rounded-full bg-accent-success" />
+              Unlimited Replies
+            </div>
+          )}
+          <span className="text-[#dadce0] text-[10px]">•</span>
           <div className="flex items-center gap-1 text-[11px] font-medium text-[#5f6368]">
             <Activity className="h-3.5 w-3.5 text-google-blue" />
             <span>API Quota: <span className="font-semibold text-slate-800">92%</span></span>

@@ -22,6 +22,7 @@ export async function POST(req: NextRequest) {
       customVariable1,
       customVariable2,
       customVariable3,
+      approvalMode
     } = body;
 
     if (!name) {
@@ -48,6 +49,7 @@ export async function POST(req: NextRequest) {
       customVariable1: customVariable1 || "",
       customVariable2: customVariable2 || "",
       customVariable3: customVariable3 || "",
+      approvalMode: approvalMode || "review"
     };
 
     db.rules.push(newRule);

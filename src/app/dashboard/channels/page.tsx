@@ -13,7 +13,8 @@ import {
   ChevronDown,
   ChevronUp,
   Video,
-  Play
+  Play,
+  Shield
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -41,7 +42,7 @@ export default function ChannelsPage() {
 
   const [channels, setChannels] = useState<Channel[]>([]);
   const [loading, setLoading] = useState(true);
-  const [clientIdConfigured, setClientIdConfigured] = useState(false);
+  const [disconnecting, setDisconnecting] = useState<string | null>(null);
   
   // Video listing panel state
   const [expandedChannelId, setExpandedChannelId] = useState<string | null>(null);
@@ -71,23 +72,14 @@ export default function ChannelsPage() {
     }
   }, [showToast, triggerRefresh]);
 
-  // Load channels and credentials config status
+  // Load channels
   useEffect(() => {
     async function loadPageData() {
       try {
-        const [channelsRes, settingsRes] = await Promise.all([
-          fetch("/api/channels"),
-          fetch("/api/settings")
-        ]);
+        const channelsRes = await fetch("/api/channels");
 
         if (channelsRes.ok) {
           setChannels(await channelsRes.json());
-        }
-
-        if (settingsRes.ok) {
-          const settings = await settingsRes.json();
-          const hasCreds = !!settings.authSettings?.googleClientId;
-          setClientIdConfigured(hasCreds);
         }
       } catch (err) {
         console.error("Error loading channels page data:", err);
@@ -175,6 +167,31 @@ export default function ChannelsPage() {
     window.location.href = "/api/auth/google";
   };
 
+  // Disconnect a channel
+  const handleDisconnect = async (channelId: string) => {
+    if (!confirm("Are you sure you want to disconnect this channel? You can reconnect later.")) return;
+    setDisconnecting(channelId);
+    try {
+      const res = await fetch("/api/channels", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ channelId })
+      });
+
+      if (res.ok) {
+        showToast("Channel disconnected successfully.", "success");
+        setChannels(channels.filter((c) => c.id !== channelId));
+        triggerRefresh();
+      } else {
+        showToast("Failed to disconnect channel.", "error");
+      }
+    } catch (err) {
+      showToast("Error disconnecting channel.", "error");
+    } finally {
+      setDisconnecting(null);
+    }
+  };
+
   // Run Manual Poll trigger for immediate sync
   const triggerManualSync = async () => {
     showToast("Checking automated videos for new comments...", "info");
@@ -222,43 +239,25 @@ export default function ChannelsPage() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-3 items-start">
-        {/* Connection Form Column */}
+      {/* Connection Form Column */}
         <div className="rounded-xl border border-[#dadce0] bg-white p-5 shadow-sm space-y-4 md:col-span-1">
           <div>
             <h3 className="font-display text-sm font-bold text-slate-800">YouTube Account Integration</h3>
-            <p className="text-[11px] text-slate-500 mt-0.5">Authenticate with YouTube using official Google OAuth credentials.</p>
+            <p className="text-[11px] text-slate-500 mt-0.5">Sign in with Google to link your YouTube channel securely.</p>
           </div>
 
-          {clientIdConfigured ? (
-            <button
-              onClick={handleGoogleLoginRedirect}
-              className="flex w-full items-center justify-center gap-2 rounded-full bg-red-600 hover:bg-red-700 py-2.5 text-xs font-semibold text-white transition shadow-sm active:scale-95 cursor-pointer"
-            >
-              <Youtube className="h-4 w-4 text-white fill-white" />
-              Connect YouTube Channel
-            </button>
-          ) : (
-            <div className="rounded-xl bg-amber-50 border border-amber-200 p-4 text-[11px] text-amber-800 space-y-2">
-              <div className="flex gap-2">
-                <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
-                <span className="font-bold">OAuth Credentials Not Setup</span>
-              </div>
-              <p className="leading-relaxed text-slate-650">
-                You must configure your **Google Client ID** and **Client Secret** inside Settings before connecting.
-              </p>
-              <a
-                href="/dashboard/settings"
-                className="inline-block text-[10px] text-google-blue font-bold hover:underline"
-              >
-                Go to Settings →
-              </a>
-            </div>
-          )}
+          <button
+            onClick={handleGoogleLoginRedirect}
+            className="flex w-full items-center justify-center gap-2 rounded-full bg-red-600 hover:bg-red-700 py-2.5 text-xs font-semibold text-white transition shadow-sm active:scale-95 cursor-pointer"
+          >
+            <Youtube className="h-4 w-4 text-white fill-white" />
+            Connect YouTube Channel
+          </button>
 
-          <div className="border-t border-slate-100 pt-3 text-[10px] text-slate-450 leading-relaxed space-y-1.5">
-            <div className="flex gap-1.5 items-start">
-              <Info className="h-3.5 w-3.5 text-google-blue shrink-0 mt-0.5" />
-              <p>To receive background tokens, please consent to permissions requested on the auth screen.</p>
+          <div className="border-t border-slate-100 pt-3 space-y-2">
+            <div className="flex gap-1.5 items-start text-[10px] text-slate-450 leading-relaxed">
+              <Shield className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
+              <p>We never store your password. YouTube access can be revoked anytime from your <a href="https://myaccount.google.com/permissions" target="_blank" rel="noreferrer" className="text-google-blue font-semibold hover:underline">Google account settings</a>.</p>
             </div>
           </div>
         </div>
@@ -316,6 +315,19 @@ export default function ChannelsPage() {
                       >
                         <span>Setup Videos</span>
                         {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                      </button>
+
+                      <button
+                        onClick={() => handleDisconnect(ch.id)}
+                        disabled={disconnecting === ch.id}
+                        className="inline-flex items-center gap-1 border border-red-200 bg-white text-red-500 px-3 py-1.5 rounded-full text-xs font-semibold hover:bg-red-50 transition disabled:opacity-50"
+                        title="Disconnect this channel"
+                      >
+                        {disconnecting === ch.id ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-3.5 w-3.5" />
+                        )}
                       </button>
                       
                       <a

@@ -74,3 +74,11 @@ body {
 .live-pulse {
   animation: soft-pulse 2s infinite ease-in-out;
 }
+
+/* FAQ Accordion classes */
+.faq-item .faq-answer {
+  display: none;
+}
+.faq-item.open .faq-answer {
+  display: block;
+}
