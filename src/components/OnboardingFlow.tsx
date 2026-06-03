@@ -83,7 +83,7 @@ export default function OnboardingFlow() {
 
         if (settingsRes.ok) {
           const settings = await settingsRes.json();
-          setClientIdConfigured(!!settings.authSettings?.googleClientId);
+          setClientIdConfigured(!!settings.authSettings?.googleClientId || !!settings.globalOAuth);
         }
       } catch (err) {
         console.error("Onboarding load error:", err);

@@ -49,6 +49,7 @@ export default function SettingsPage() {
   // Google OAuth Credentials
   const [googleClientId, setGoogleClientId] = useState("");
   const [googleClientSecret, setGoogleClientSecret] = useState("");
+  const [hasGlobalOAuth, setHasGlobalOAuth] = useState(false);
 
   const [members, setMembers] = useState<Member[]>([]);
   const [logs, setLogs] = useState<ActivityLog[]>([]);
@@ -125,7 +126,7 @@ export default function SettingsPage() {
         const res = await fetch("/api/settings");
         if (res.ok) {
           const data = await res.json();
-          const { workspace, activityLogs, authSettings } = data;
+          const { workspace, activityLogs, authSettings, globalOAuth } = data;
           
           setWorkspaceName(workspace.name);
           setDailyQuota(workspace.settings.dailyReplyQuota);
@@ -133,6 +134,7 @@ export default function SettingsPage() {
           setSpamProtection(workspace.settings.spamProtection);
           setSlackWebhook(workspace.settings.slackWebhook);
           setEmailDigest(workspace.settings.emailDigest);
+          setHasGlobalOAuth(!!globalOAuth);
           
           if (authSettings) {
             setGoogleClientId(authSettings.googleClientId || "");
@@ -271,59 +273,72 @@ export default function SettingsPage() {
         <div className="lg:col-span-2 space-y-6">
           
           {/* Google OAuth API Credentials Block */}
-          <form onSubmit={handleSaveOAuthCredentials} className="rounded-xl border border-[#dadce0] bg-white p-5 shadow-sm space-y-4">
-            <div className="flex items-center gap-2 border-b border-slate-100 pb-3 mb-2">
-              <Key className="h-5 w-5 text-red-500 shrink-0" />
-              <h3 className="font-display text-sm font-bold text-slate-800">Google OAuth Credentials</h3>
-            </div>
+          {!hasGlobalOAuth ? (
+            <form onSubmit={handleSaveOAuthCredentials} className="rounded-xl border border-[#dadce0] bg-white p-5 shadow-sm space-y-4">
+              <div className="flex items-center gap-2 border-b border-slate-100 pb-3 mb-2">
+                <Key className="h-5 w-5 text-red-500 shrink-0" />
+                <h3 className="font-display text-sm font-bold text-slate-800">Google OAuth Credentials</h3>
+              </div>
 
-            <div className="rounded-lg bg-slate-50 p-4 border border-slate-150 text-[11px] text-slate-650 leading-relaxed space-y-1.5">
-              <span className="font-bold text-slate-700 block">Setup Instructions:</span>
-              <p>
-                1. Go to your **Google Cloud Console** and enable the **YouTube Data API v3**.
-                <br />
-                2. Navigate to API Credentials and create an **OAuth 2.0 Client ID** (Web Application).
-                <br />
-                3. Configure Authorized Redirect URI to: 
-                <code className="bg-white border px-1.5 py-0.5 rounded font-mono ml-1 text-slate-800">http://localhost:3000/api/auth/callback/google</code>
+              <div className="rounded-lg bg-slate-50 p-4 border border-slate-150 text-[11px] text-slate-650 leading-relaxed space-y-1.5">
+                <span className="font-bold text-slate-700 block">Setup Instructions:</span>
+                <p>
+                  1. Go to your **Google Cloud Console** and enable the **YouTube Data API v3**.
+                  <br />
+                  2. Navigate to API Credentials and create an **OAuth 2.0 Client ID** (Web Application).
+                  <br />
+                  3. Configure Authorized Redirect URI to: 
+                  <code className="bg-white border px-1.5 py-0.5 rounded font-mono ml-1 text-slate-800">http://localhost:3000/api/auth/callback/google</code>
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold uppercase text-slate-400">Google Client ID</label>
+                  <input
+                    type="text"
+                    required
+                    value={googleClientId}
+                    onChange={(e) => setGoogleClientId(e.target.value)}
+                    placeholder="e.g. 1234567890-abcdef.apps.googleusercontent.com"
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs font-mono outline-none focus:border-google-blue"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold uppercase text-slate-400 font-sans">Google Client Secret</label>
+                  <input
+                    type="password"
+                    required
+                    value={googleClientSecret}
+                    onChange={(e) => setGoogleClientSecret(e.target.value)}
+                    placeholder="••••••••••••••••••••••••"
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs font-mono outline-none focus:border-google-blue"
+                  />
+                </div>
+              </div>
+
+              <div className="text-right">
+                <button
+                  type="submit"
+                  className="inline-flex items-center gap-1 rounded-full bg-slate-900 hover:bg-slate-800 px-5 py-2 text-xs font-semibold text-white shadow-sm transition active:scale-95"
+                >
+                  Save API Credentials
+                </button>
+              </div>
+            </form>
+          ) : (
+            <div className="rounded-xl border border-green-200 bg-green-50/50 p-5 space-y-3 text-left">
+              <div className="flex items-center gap-2 text-green-800 font-bold border-b border-green-150 pb-2.5">
+                <CheckCircle className="h-5 w-5 text-emerald-600 shrink-0" />
+                <h3 className="font-display text-sm font-bold">Google API Configuration Active</h3>
+              </div>
+              <p className="text-xs text-slate-650 leading-relaxed font-sans">
+                Google OAuth and YouTube APIs are managed globally by the system administrator. 
+                Standard users do not need to configure any custom Google API keys or Client Secrets to link their channels.
               </p>
             </div>
-
-            <div className="space-y-3">
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold uppercase text-slate-400">Google Client ID</label>
-                <input
-                  type="text"
-                  required
-                  value={googleClientId}
-                  onChange={(e) => setGoogleClientId(e.target.value)}
-                  placeholder="e.g. 1234567890-abcdef.apps.googleusercontent.com"
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs font-mono outline-none focus:border-google-blue"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold uppercase text-slate-400 font-sans">Google Client Secret</label>
-                <input
-                  type="password"
-                  required
-                  value={googleClientSecret}
-                  onChange={(e) => setGoogleClientSecret(e.target.value)}
-                  placeholder="••••••••••••••••••••••••"
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs font-mono outline-none focus:border-google-blue"
-                />
-              </div>
-            </div>
-
-            <div className="text-right">
-              <button
-                type="submit"
-                className="inline-flex items-center gap-1 rounded-full bg-slate-900 hover:bg-slate-800 px-5 py-2 text-xs font-semibold text-white shadow-sm transition active:scale-95"
-              >
-                Save API Credentials
-              </button>
-            </div>
-          </form>
+          )}
 
           {/* Preferences Box */}
           <form onSubmit={handleSaveSettings} className="rounded-xl border border-[#dadce0] bg-white p-5 shadow-sm space-y-4">

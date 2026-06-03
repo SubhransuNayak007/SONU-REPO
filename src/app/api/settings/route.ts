@@ -7,7 +7,8 @@ export async function GET() {
     workspace: db.workspace,
     activityLogs: db.activityLogs,
     userSession: db.userSession,
-    authSettings: db.authSettings
+    authSettings: db.authSettings,
+    globalOAuth: !!process.env.GOOGLE_CLIENT_ID
   });
 }
 
