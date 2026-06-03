@@ -378,12 +378,20 @@ export default function OnboardingFlow() {
               </div>
 
               <div className="flex justify-between items-center pt-4 border-t border-slate-100">
-                <button
-                  onClick={() => setStep(1)}
-                  className="text-xs font-semibold text-slate-400 hover:text-slate-600"
-                >
-                  Back
-                </button>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setStep(1)}
+                    className="text-xs font-semibold text-slate-400 hover:text-slate-600"
+                  >
+                    Back
+                  </button>
+                  <button
+                    onClick={() => router.push("/dashboard")}
+                    className="text-xs font-semibold text-google-blue hover:underline"
+                  >
+                    Skip to Dashboard
+                  </button>
+                </div>
                 <button
                   disabled={loading || !ruleName || !keywords || !replyBody}
                   onClick={handleSaveRule}

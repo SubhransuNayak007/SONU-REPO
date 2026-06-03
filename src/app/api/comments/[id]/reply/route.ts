@@ -30,7 +30,7 @@ export async function POST(
 
     await saveDB(db);
 
-    await logActivity("Sarah Riviera", `Manually replied to '${comment.author}'`);
+    await logActivity(db.userSession?.name || "Creator", `Manually replied to '${comment.author}'`);
 
     return NextResponse.json(db.comments[index]);
   } catch (err) {

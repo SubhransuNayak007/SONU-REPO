@@ -10,20 +10,43 @@ export default function LoginPage() {
   const router = useRouter();
   const showToast = useUIStore((state) => state.showToast);
   
-  const [email, setEmail] = useState("sarah.creator@acme.com");
-  const [password, setPassword] = useState("password123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     
-    // Simulate login delay
-    setTimeout(() => {
+    try {
+      const namePart = email.split("@")[0];
+      const formattedName = namePart.charAt(0).toUpperCase() + namePart.slice(1).replace(/[._]/g, " ");
+
+      const res = await fetch("/api/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userSession: {
+            email,
+            name: formattedName,
+            tier: "free",
+            repliesToday: 0
+          }
+        })
+      });
+
+      if (res.ok) {
+        showToast(`Signed in as ${formattedName}`, "success");
+        router.push("/onboarding");
+      } else {
+        showToast("Sign in failed. Please try again.", "error");
+      }
+    } catch (err) {
+      console.error("Sign in error:", err);
+      showToast("Network error. Please try again.", "error");
+    } finally {
       setLoading(false);
-      showToast("Signed in as Sarah Jenkins", "success");
-      router.push("/onboarding");
-    }, 1200);
+    }
   };
 
   return (

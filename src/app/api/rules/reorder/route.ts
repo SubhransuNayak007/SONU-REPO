@@ -22,7 +22,7 @@ export async function PUT(req: NextRequest) {
 
     await saveDB(db);
 
-    await logActivity("Sarah Jenkins", "Reordered rules priority hierarchy");
+    await logActivity(db.userSession?.name || "Creator", "Reordered rules priority hierarchy");
 
     return NextResponse.json({ success: true, rules: db.rules.sort((a, b) => a.priority - b.priority) });
   } catch (err) {

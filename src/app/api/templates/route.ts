@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     db.templates.push(newTemplate);
     await saveDB(db);
 
-    await logActivity("Sarah Jenkins", `Created template '${name}'`);
+    await logActivity(db.userSession?.name || "Creator", `Created template '${name}'`);
 
     return NextResponse.json(newTemplate, { status: 201 });
   } catch (err) {

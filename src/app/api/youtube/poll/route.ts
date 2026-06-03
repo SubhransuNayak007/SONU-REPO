@@ -29,15 +29,15 @@ export async function GET(req: NextRequest) {
     }
 
     const activeUser = db.userSession || {
-      email: "sarah.creator@acme.com",
-      name: "Sarah Jenkins",
+      email: "",
+      name: "Creator",
       tier: "free" as const,
       repliesToday: 0,
       lastResetDate: new Date().toISOString().split("T")[0]
     };
 
-    // Calculate limit by tier: Free = 10 replies/day, Premium = 200 replies/day
-    const maxDailyLimit = activeUser.tier === "premium" ? 200 : 10;
+    // Calculate limit by tier: Free = 0 replies/day, Premium = 200 replies/day
+    const maxDailyLimit = activeUser.tier === "premium" ? 200 : 0;
     
     // Ensure date resets if necessary
     const todayStr = new Date().toISOString().split("T")[0];

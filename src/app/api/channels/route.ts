@@ -25,7 +25,7 @@ export async function PUT(req: NextRequest) {
     db.channels[chIdx].automatedVideos = automatedVideos;
     await saveDB(db);
     
-    await logActivity("Sarah Jenkins", `Updated automated videos selection for channel '${db.channels[chIdx].name}'`);
+    await logActivity(db.userSession?.name || "Creator", `Updated automated videos selection for channel '${db.channels[chIdx].name}'`);
 
     return NextResponse.json({ success: true, channel: db.channels[chIdx] });
   } catch (err) {
@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
     db.channels.push(newChannel);
     await saveDB(db);
     
-    await logActivity("Sarah Jenkins", `Connected channel ${name} (${cleanHandle})`);
+    await logActivity(db.userSession?.name || "Creator", `Connected channel ${name} (${cleanHandle})`);
     
     return NextResponse.json(newChannel, { status: 201 });
   } catch (err) {

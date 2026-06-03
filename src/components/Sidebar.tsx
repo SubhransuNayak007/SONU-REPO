@@ -36,24 +36,33 @@ export default function Sidebar() {
   const showToast = useUIStore((state) => state.showToast);
 
   const [channels, setChannels] = useState<Channel[]>([]);
-  const [workspaceName, setWorkspaceName] = useState("Acme Creator Network");
+  const [workspaceName, setWorkspaceName] = useState("My Workspace");
+  const [userSession, setUserSession] = useState<any>(null);
 
   // Fetch channels on mount and when UI refreshes
   const refreshTrigger = useUIStore((state) => state.refreshTrigger);
 
   useEffect(() => {
-    async function fetchChannels() {
+    async function fetchChannelsAndSettings() {
       try {
-        const res = await fetch("/api/channels");
-        if (res.ok) {
-          const data = await res.json();
+        const [chRes, setRes] = await Promise.all([
+          fetch("/api/channels"),
+          fetch("/api/settings")
+        ]);
+        if (chRes.ok) {
+          const data = await chRes.json();
           setChannels(data);
         }
+        if (setRes.ok) {
+          const data = await setRes.json();
+          setWorkspaceName(data.workspace?.name || "My Workspace");
+          setUserSession(data.userSession || null);
+        }
       } catch (err) {
-        console.error("Error fetching channels:", err);
+        console.error("Error fetching sidebar data:", err);
       }
     }
-    fetchChannels();
+    fetchChannelsAndSettings();
   }, [refreshTrigger]);
 
   const navItems = [
@@ -85,13 +94,15 @@ export default function Sidebar() {
         <div className="flex h-14 items-center justify-between border-b border-slate-800 px-4">
           <div className="flex items-center gap-2 overflow-hidden">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-google-blue font-display text-base font-semibold text-white">
-              A
+              {(workspaceName || "M").charAt(0).toUpperCase()}
             </div>
             <div className="flex flex-col truncate lg:block md:hidden">
               <span className="font-display text-sm font-semibold tracking-wide">
                 {workspaceName}
               </span>
-              <span className="text-[10px] text-slate-400">Professional Plan</span>
+              <span className="text-[10px] text-slate-400 font-medium">
+                {userSession?.tier === "premium" ? "Premium Plan" : "Free Plan"}
+              </span>
             </div>
           </div>
           <ChevronDown className="h-4 w-4 shrink-0 text-slate-400 lg:block md:hidden" />
@@ -180,13 +191,17 @@ export default function Sidebar() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 overflow-hidden">
               <img
-                src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150"
-                alt="Sarah Jenkins"
+                src={userSession?.email ? `https://ui-avatars.com/api/?name=${encodeURIComponent(userSession.name || "Creator")}&background=1a73e8&color=fff` : "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150"}
+                alt={userSession?.name || "Creator"}
                 className="h-8 w-8 shrink-0 rounded-full border border-slate-700 object-cover"
               />
               <div className="flex flex-col truncate lg:block md:hidden">
-                <span className="text-xs font-semibold text-slate-100 block truncate">Sarah Jenkins</span>
-                <span className="text-[10px] text-slate-400 block truncate">sarah@acme.com</span>
+                <span className="text-xs font-semibold text-slate-100 block truncate">
+                  {userSession?.name || "Creator"}
+                </span>
+                <span className="text-[10px] text-slate-400 block truncate">
+                  {userSession?.email || "No Email"}
+                </span>
               </div>
             </div>
             <button 

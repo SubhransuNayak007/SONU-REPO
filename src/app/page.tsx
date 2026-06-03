@@ -286,7 +286,7 @@ export default function LandingPage() {
             <div>
               <h4 className="font-bold text-slate-500 text-sm uppercase">Agency Net</h4>
               <div className="flex items-baseline mt-4 mb-2">
-                <span className="text-3xl font-extrabold text-[#202124]">$99</span>
+                <span className="text-3xl font-extrabold text-[#202124]">₹299</span>
                 <span className="text-xs text-slate-400 ml-1">/ month</span>
               </div>
               <p className="text-xs text-slate-500 leading-relaxed">For agencies managing network portfolios.</p>

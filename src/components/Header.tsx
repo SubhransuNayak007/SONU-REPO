@@ -24,6 +24,24 @@ export default function Header() {
   const [channelName, setChannelName] = useState("Loading Channel...");
   const [channelStatus, setChannelStatus] = useState("active");
   const refreshTrigger = useUIStore((state) => state.refreshTrigger);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [logs, setLogs] = useState<any[]>([]);
+
+  // Fetch activity logs
+  useEffect(() => {
+    async function fetchLogs() {
+      try {
+        const res = await fetch("/api/settings");
+        if (res.ok) {
+          const data = await res.json();
+          setLogs(data.activityLogs.slice(0, 5));
+        }
+      } catch (err) {
+        console.error("Error fetching logs in header:", err);
+      }
+    }
+    fetchLogs();
+  }, [refreshTrigger]);
 
   // Keyboard shortcut listener for Command Palette (Ctrl+K or Cmd+K)
   useEffect(() => {
@@ -134,13 +152,55 @@ export default function Header() {
           <span className="hidden sm:inline">Connect Channel</span>
         </button>
 
-        <button 
-          onClick={() => showToast("No new notifications.", "info")}
-          className="rounded-full p-2 text-[#5f6368] hover:bg-[#f1f3f4] relative transition-all"
-        >
-          <Bell className="h-5 w-5" />
-          <span className="absolute top-1 right-1.5 h-2 w-2 rounded-full bg-accent-live" />
-        </button>
+        <div className="relative">
+          <button 
+            onClick={() => setNotificationsOpen(!notificationsOpen)}
+            className="rounded-full p-2 text-[#5f6368] hover:bg-[#f1f3f4] relative transition-all cursor-pointer"
+            id="notification-bell-btn"
+          >
+            <Bell className="h-5 w-5" />
+            <span className="absolute top-1 right-1.5 h-2 w-2 rounded-full bg-accent-live" />
+          </button>
+
+          {notificationsOpen && (
+            <>
+              <div 
+                className="fixed inset-0 z-40" 
+                onClick={() => setNotificationsOpen(false)}
+              />
+              <div className="absolute right-0 mt-2 w-80 rounded-xl border border-[#dadce0] bg-white p-4 shadow-lg z-50 text-left space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                  <span className="text-xs font-bold text-slate-800">Recent Workspace Activity</span>
+                  <button 
+                    onClick={() => {
+                      setNotificationsOpen(false);
+                      router.push("/dashboard/settings");
+                    }}
+                    className="text-[10px] text-google-blue font-bold hover:underline cursor-pointer"
+                  >
+                    View Full Trail
+                  </button>
+                </div>
+                <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1">
+                  {logs.length > 0 ? (
+                    logs.map((log) => (
+                      <div key={log.id} className="text-[11px] leading-snug border-b border-slate-100 pb-2 last:border-b-0 last:pb-0">
+                        <p className="font-semibold text-slate-850">
+                          {log.user}: <span className="font-normal text-slate-605">{log.action}</span>
+                        </p>
+                        <span className="text-[9px] text-slate-400 block mt-0.5">
+                          {new Date(log.timestamp).toLocaleString()}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-xs text-slate-400 text-center py-2">No recent activity logs.</p>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </header>
   );

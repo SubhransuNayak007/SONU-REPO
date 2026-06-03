@@ -15,7 +15,8 @@ import {
   Loader2,
   Lock,
   ChevronDown,
-  Key
+  Key,
+  Gift
 } from "lucide-react";
 
 interface Member {
@@ -60,6 +61,62 @@ export default function SettingsPage() {
 
   // Blocked user adding state
   const [newBlockedUser, setNewBlockedUser] = useState("");
+
+  // Coupon generator states
+  const [adminPass, setAdminPass] = useState("");
+  const [customCouponCode, setCustomCouponCode] = useState("");
+  const [generatingCoupon, setGeneratingCoupon] = useState(false);
+  const [generatedCoupons, setGeneratedCoupons] = useState<any[]>([]);
+
+  // Function to load coupons if password entered
+  const loadCoupons = async () => {
+    if (adminPass === "12wetyukjlo9") {
+      try {
+        const res = await fetch(`/api/coupons?adminPass=${adminPass}`);
+        if (res.ok) {
+          const data = await res.json();
+          setGeneratedCoupons(data);
+        }
+      } catch (err) {
+        console.error("Error loading coupons:", err);
+      }
+    } else {
+      setGeneratedCoupons([]);
+    }
+  };
+
+  useEffect(() => {
+    loadCoupons();
+  }, [adminPass]);
+
+  const handleGenerateCoupon = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adminPass) return;
+    setGeneratingCoupon(true);
+    try {
+      const res = await fetch("/api/coupons", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          adminPass,
+          code: customCouponCode
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(`Coupon generated successfully!`, "success");
+        setCustomCouponCode("");
+        loadCoupons();
+      } else {
+        showToast(data.error || "Failed to generate coupon", "error");
+      }
+    } catch (err) {
+      console.error("Error generating coupon:", err);
+      showToast("Network error generating coupon", "error");
+    } finally {
+      setGeneratingCoupon(false);
+    }
+  };
 
   // Fetch settings, team, logs
   useEffect(() => {
@@ -472,6 +529,73 @@ export default function SettingsPage() {
                 </button>
               </div>
             </form>
+          </div>
+
+          {/* Coupon Code Generator */}
+          <div className="rounded-xl border border-[#dadce0] bg-white p-5 shadow-sm space-y-4">
+            <div className="flex items-center gap-2 border-b border-slate-100 pb-3 mb-2">
+              <Gift className="h-5 w-5 text-google-blue shrink-0" />
+              <h3 className="font-display text-sm font-bold text-slate-800">Coupon Generator (Admin)</h3>
+            </div>
+
+            <form onSubmit={handleGenerateCoupon} className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold uppercase text-slate-400">Admin Password</label>
+                <input
+                  type="password"
+                  required
+                  value={adminPass}
+                  onChange={(e) => setAdminPass(e.target.value)}
+                  placeholder="Enter admin password"
+                  className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs outline-none focus:border-google-blue text-slate-800"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold uppercase text-slate-400">Custom Code (Optional)</label>
+                <input
+                  type="text"
+                  value={customCouponCode}
+                  onChange={(e) => setCustomCouponCode(e.target.value)}
+                  placeholder="e.g. PREMIUMFREE"
+                  className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs outline-none focus:border-google-blue text-slate-800"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={generatingCoupon}
+                className="flex w-full items-center justify-center gap-1.5 rounded-full bg-slate-900 hover:bg-slate-800 py-2 text-xs font-semibold text-white transition disabled:opacity-50"
+              >
+                {generatingCoupon ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Gift className="h-3.5 w-3.5" />
+                    Generate Coupon
+                  </>
+                )}
+              </button>
+            </form>
+
+            {generatedCoupons.length > 0 && (
+              <div className="border-t border-slate-100 pt-3 space-y-1.5">
+                <span className="text-[10px] font-bold uppercase text-slate-400 block">Generated Coupons</span>
+                <div className="max-h-24 overflow-y-auto space-y-1 pr-1 font-mono text-[10px] text-slate-700">
+                  {generatedCoupons.map((coupon, i) => (
+                    <div key={i} className="flex justify-between items-center bg-slate-50 border p-1.5 rounded">
+                      <span className="font-bold text-slate-800">{coupon.code}</span>
+                      <span className={coupon.isUsed ? "text-slate-400" : "text-emerald-600 font-bold"}>
+                        {coupon.isUsed ? `Used by ${coupon.usedBy || "unknown"}` : "Active"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

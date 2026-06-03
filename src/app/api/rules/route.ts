@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
     db.rules.push(newRule);
     await saveDB(db);
 
-    await logActivity("Sarah Jenkins", `Created rule '${name}'`);
+    await logActivity(db.userSession?.name || "Creator", `Created rule '${name}'`);
 
     return NextResponse.json(newRule, { status: 201 });
   } catch (err) {

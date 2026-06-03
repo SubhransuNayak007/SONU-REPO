@@ -39,7 +39,7 @@ export async function PUT(
     db.rules[index] = updatedRule;
     await saveDB(db);
 
-    await logActivity("Sarah Jenkins", `Edited rule '${updatedRule.name}'`);
+    await logActivity(db.userSession?.name || "Creator", `Edited rule '${updatedRule.name}'`);
 
     return NextResponse.json(updatedRule);
   } catch (err) {
@@ -71,7 +71,7 @@ export async function DELETE(
 
     await saveDB(db);
 
-    await logActivity("Sarah Jenkins", `Deleted rule '${rule.name}'`);
+    await logActivity(db.userSession?.name || "Creator", `Deleted rule '${rule.name}'`);
 
     return NextResponse.json({ success: true });
   } catch (err) {

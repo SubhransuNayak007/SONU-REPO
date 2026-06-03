@@ -34,6 +34,8 @@ export default function DashboardOverviewPage() {
   const [rules, setRules] = useState<any[]>([]);
   const [userSession, setUserSession] = useState<UserSession | null>(null);
   const [loading, setLoading] = useState(true);
+  const [couponCode, setCouponCode] = useState("");
+  const [redeeming, setRedeeming] = useState(false);
 
   // Fetch KPI, logs, rules, and user tier session
   useEffect(() => {
@@ -84,25 +86,30 @@ export default function DashboardOverviewPage() {
     }
   };
 
-  const handleToggleTier = async (newTier: "free" | "premium") => {
+  const handleRedeemCoupon = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!couponCode.trim()) return;
+    setRedeeming(true);
     try {
-      const res = await fetch("/api/settings", {
-        method: "PUT",
+      const res = await fetch("/api/coupons", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userSession: { tier: newTier }
-        })
+        body: JSON.stringify({ code: couponCode })
       });
-
+      const data = await res.json();
       if (res.ok) {
-        const data = await res.json();
+        showToast(data.message || "Subscription upgraded to Premium!", "success");
+        setCouponCode("");
         setUserSession(data.userSession);
-        showToast(`Switched account plan to ${newTier.toUpperCase()}`, "success");
         triggerRefresh();
+      } else {
+        showToast(data.error || "Failed to redeem coupon", "error");
       }
     } catch (err) {
-      console.error("Failed to switch tier:", err);
-      showToast("Error switching subscription plan", "error");
+      console.error("Redeem error:", err);
+      showToast("Network error redeeming coupon", "error");
+    } finally {
+      setRedeeming(false);
     }
   };
 
@@ -123,8 +130,8 @@ export default function DashboardOverviewPage() {
     );
   }
 
-  const maxQuota = userSession?.tier === "premium" ? 200 : 10;
-  const usagePercentage = Math.min(100, Math.round(((userSession?.repliesToday || 0) / maxQuota) * 100));
+  const maxQuota = userSession?.tier === "premium" ? 200 : 0;
+  const usagePercentage = maxQuota === 0 ? 100 : Math.min(100, Math.round(((userSession?.repliesToday || 0) / maxQuota) * 100));
 
   return (
     <div className="space-y-6 text-left font-sans">
@@ -174,32 +181,30 @@ export default function DashboardOverviewPage() {
             </div>
           </div>
 
-          {/* Test rate limits toggle */}
-          <div className="flex items-center gap-2 shrink-0">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Plan Tester:</span>
-            <div className="inline-flex rounded-full border border-[#dadce0] bg-slate-50 p-0.5">
+          {/* Coupon Redemption Option */}
+          {userSession.tier !== "premium" ? (
+            <form onSubmit={handleRedeemCoupon} className="flex items-center gap-2 shrink-0">
+              <input
+                type="text"
+                value={couponCode}
+                onChange={(e) => setCouponCode(e.target.value)}
+                placeholder="Enter Coupon Code"
+                className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs outline-none focus:border-google-blue w-40 text-slate-800"
+                required
+              />
               <button
-                onClick={() => handleToggleTier("free")}
-                className={`rounded-full px-3 py-1 text-[10px] font-bold transition-all
-                  ${userSession.tier === "free" 
-                    ? "bg-white text-slate-800 shadow-sm border border-slate-200/50" 
-                    : "text-slate-400 hover:text-slate-600"}
-                `}
+                type="submit"
+                disabled={redeeming}
+                className="rounded-lg bg-google-blue hover:bg-google-blue-pressed text-white text-xs font-semibold px-4 py-1.5 transition active:scale-95 disabled:opacity-50"
               >
-                Free (10/day)
+                {redeeming ? "Redeeming..." : "Redeem"}
               </button>
-              <button
-                onClick={() => handleToggleTier("premium")}
-                className={`rounded-full px-3 py-1 text-[10px] font-bold transition-all
-                  ${userSession.tier === "premium" 
-                    ? "bg-white text-slate-800 shadow-sm border border-slate-200/50" 
-                    : "text-slate-400 hover:text-slate-600"}
-                `}
-              >
-                Premium (200/day)
-              </button>
+            </form>
+          ) : (
+            <div className="flex items-center gap-1 text-accent-success text-xs font-bold shrink-0">
+              <span>✓ Premium Active</span>
             </div>
-          </div>
+          )}
         </div>
       )}
 

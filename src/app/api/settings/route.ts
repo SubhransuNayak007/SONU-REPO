@@ -42,7 +42,7 @@ export async function PUT(req: NextRequest) {
     }
 
     await saveDB(db);
-    await logActivity("Sarah Jenkins", "Updated workspace configuration parameters");
+    await logActivity(db.userSession?.name || "Creator", "Updated workspace configuration parameters");
 
     return NextResponse.json({ 
       success: true, 
@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
     db.workspace.members.push(newMember);
     await saveDB(db);
 
-    await logActivity("Sarah Jenkins", `Invited team member ${formattedName} (${email}) as ${role}`);
+    await logActivity(db.userSession?.name || "Creator", `Invited team member ${formattedName} (${email}) as ${role}`);
 
     return NextResponse.json(newMember, { status: 201 });
   } catch (err) {

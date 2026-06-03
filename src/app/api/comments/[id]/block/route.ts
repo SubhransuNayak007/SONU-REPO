@@ -36,7 +36,7 @@ export async function POST(
 
     await saveDB(db);
 
-    await logActivity("Sarah Riviera", `Blocked user '${author}' and cancelled all queued replies`);
+    await logActivity(db.userSession?.name || "Creator", `Blocked user '${author}' and cancelled all queued replies`);
 
     // Return the specific updated comment
     const updatedComment = db.comments.find((c) => c.id === id);

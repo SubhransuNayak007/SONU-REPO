@@ -38,7 +38,7 @@ export async function PUT(
     db.templates[index] = updatedTemplate;
     await saveDB(db);
 
-    await logActivity("Sarah Jenkins", `Updated template '${updatedTemplate.name}'`);
+    await logActivity(db.userSession?.name || "Creator", `Updated template '${updatedTemplate.name}'`);
 
     return NextResponse.json(updatedTemplate);
   } catch (err) {
@@ -72,7 +72,7 @@ export async function DELETE(
 
     await saveDB(db);
 
-    await logActivity("Sarah Jenkins", `Deleted template '${template.name}'`);
+    await logActivity(db.userSession?.name || "Creator", `Deleted template '${template.name}'`);
 
     return NextResponse.json({ success: true });
   } catch (err) {

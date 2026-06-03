@@ -24,7 +24,7 @@ export async function POST(
 
     await saveDB(db);
 
-    await logActivity("Sarah Riviera", `Skipped auto-reply for '${comment.author}'`);
+    await logActivity(db.userSession?.name || "Creator", `Skipped auto-reply for '${comment.author}'`);
 
     return NextResponse.json(db.comments[index]);
   } catch (err) {

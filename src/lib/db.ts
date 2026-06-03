@@ -134,6 +134,12 @@ export interface AuthSettings {
   googleClientSecret: string;
 }
 
+export interface Coupon {
+  code: string;
+  isUsed: boolean;
+  usedBy?: string;
+}
+
 export interface DBData {
   workspace: Workspace;
   channels: Channel[];
@@ -143,122 +149,11 @@ export interface DBData {
   activityLogs: ActivityLog[];
   userSession?: UserSession;
   authSettings?: AuthSettings;
+  coupons?: Coupon[];
 }
 
-const DEFAULT_TEMPLATES: Template[] = [
-  {
-    id: "tpl-pricing",
-    name: "Pricing & Plans Guide",
-    emoji: "💵",
-    body: "Hey {{commenter_name}}! 👋 Our pricing starts at ₹99/mo. Check out our detailed pricing plans here → {{custom_variable_1}}! Let me know if you have any questions.",
-    variants: [
-      "Hey {{commenter_name}}! 👋 Our pricing starts at ₹99/mo. Check out our detailed pricing plans here → {{custom_variable_1}}! Let me know if you have any questions.",
-      "Hi {{commenter_name}}! You can find the cost details on our website here: {{custom_variable_1}} 🚀. Hope this helps!",
-      "Thanks for asking, {{commenter_name}}! All plan details are listed at {{custom_variable_1}}."
-    ],
-    usageCount: 0,
-    lastEdited: "2026-06-02T18:00:00Z"
-  },
-  {
-    id: "tpl-discount",
-    name: "10% Creator Discount",
-    emoji: "🏷️",
-    body: "Hey {{commenter_name}}! Thanks for watching. Use code {{custom_variable_2}} for 10% off our course or products! Link: {{custom_variable_1}}",
-    variants: [
-      "Hey {{commenter_name}}! Thanks for watching. Use code {{custom_variable_2}} for 10% off our course or products! Link: {{custom_variable_1}}",
-      "Hi {{commenter_name}}! Grab 10% off with promo code {{custom_variable_2}} at checkout! Link: {{custom_variable_1}} 🎉"
-    ],
-    usageCount: 0,
-    lastEdited: "2026-06-02T18:00:00Z"
-  },
-  {
-    id: "tpl-support",
-    name: "Customer Support Escalation",
-    emoji: "🔧",
-    body: "Hello {{commenter_name}}! Sorry to hear you are having trouble. Please reach out to our team at {{custom_variable_3}} and we will investigate right away.",
-    variants: [
-      "Hello {{commenter_name}}! Sorry to hear you are having trouble. Please reach out to our team at {{custom_variable_3}} and we will investigate right away.",
-      "Hi {{commenter_name}}, please send our team an email at {{custom_variable_3}} with your details so we can fix this for you ASAP!"
-    ],
-    usageCount: 0,
-    lastEdited: "2026-06-02T18:00:00Z"
-  }
-];
-
-const DEFAULT_RULES: Rule[] = [
-  {
-    id: "rule-pricing",
-    name: "Pricing Inquiries",
-    isActive: true,
-    priority: 1,
-    colorLabel: "red",
-    conditions: [
-      { id: "cond-1", type: "contains", value: "price" },
-      { id: "cond-2", type: "contains", value: "cost" },
-      { id: "cond-3", type: "contains", value: "how much" }
-    ],
-    operator: "OR",
-    filters: {
-      topLevelOnly: true,
-      maxRepliesPerUser: 5,
-      language: "auto"
-    },
-    templateId: "tpl-pricing",
-    delaySeconds: 180,
-    dailyLimit: 50,
-    customVariable1: "https://tubeflow.com/pricing",
-    customVariable2: "",
-    customVariable3: ""
-  },
-  {
-    id: "rule-discount",
-    name: "Discount & Coupons",
-    isActive: true,
-    priority: 2,
-    colorLabel: "blue",
-    conditions: [
-      { id: "cond-4", type: "contains", value: "discount" },
-      { id: "cond-5", type: "contains", value: "coupon" },
-      { id: "cond-6", type: "contains", value: "promo" }
-    ],
-    operator: "OR",
-    filters: {
-      topLevelOnly: true,
-      maxRepliesPerUser: 3,
-      language: "en"
-    },
-    templateId: "tpl-discount",
-    delaySeconds: 300,
-    dailyLimit: 30,
-    customVariable1: "https://tubeflow.com/shop",
-    customVariable2: "YOUTUBE10",
-    customVariable3: ""
-  },
-  {
-    id: "rule-support",
-    name: "Technical Support",
-    isActive: true,
-    priority: 3,
-    colorLabel: "yellow",
-    conditions: [
-      { id: "cond-7", type: "contains", value: "broken" },
-      { id: "cond-8", type: "contains", value: "error" },
-      { id: "cond-9", type: "contains", value: "doesn't work" }
-    ],
-    operator: "OR",
-    filters: {
-      topLevelOnly: false,
-      maxRepliesPerUser: 5,
-      language: "auto"
-    },
-    templateId: "tpl-support",
-    delaySeconds: 120,
-    dailyLimit: 20,
-    customVariable1: "",
-    customVariable2: "",
-    customVariable3: "support@tubeflow.com"
-  }
-];
+const DEFAULT_TEMPLATES: Template[] = [];
+const DEFAULT_RULES: Rule[] = [];
 
 export async function getDB(): Promise<DBData> {
   const uri = process.env.MONGODB_URI;
@@ -277,8 +172,8 @@ export async function getDB(): Promise<DBData> {
 
         if (!parsed.userSession) {
           parsed.userSession = {
-            email: "sarah.creator@acme.com",
-            name: "Sarah Jenkins",
+            email: "",
+            name: "Creator",
             tier: "free",
             repliesToday: 0,
             lastResetDate: new Date().toISOString().split("T")[0]
@@ -291,6 +186,11 @@ export async function getDB(): Promise<DBData> {
             googleClientId: "",
             googleClientSecret: ""
           };
+          dirty = true;
+        }
+
+        if (!parsed.coupons) {
+          parsed.coupons = [];
           dirty = true;
         }
 
@@ -309,15 +209,15 @@ export async function getDB(): Promise<DBData> {
       } else {
         // Document not found in Mongo, seed default structure
         const defaultData: DBData = {
-          workspace: { name: "My Workspace", members: [{ id: "m1", email: "sarah.creator@acme.com", name: "Sarah Jenkins", role: "Owner", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150" }], settings: { dailyReplyQuota: 500, blockedUsers: [], spamProtection: true, slackWebhook: "", emailDigest: "weekly" } },
+          workspace: { name: "My Workspace", members: [], settings: { dailyReplyQuota: 500, blockedUsers: [], spamProtection: true, slackWebhook: "", emailDigest: "weekly" } },
           channels: [],
-          templates: DEFAULT_TEMPLATES,
-          rules: DEFAULT_RULES,
+          templates: [],
+          rules: [],
           comments: [],
-          activityLogs: [{ id: "log-creation", user: "Sarah Jenkins", action: "Initialized workspace settings in cloud", timestamp: new Date().toISOString() }],
+          activityLogs: [],
           userSession: {
-            email: "sarah.creator@acme.com",
-            name: "Sarah Jenkins",
+            email: "",
+            name: "Creator",
             tier: "free",
             repliesToday: 0,
             lastResetDate: new Date().toISOString().split("T")[0]
@@ -325,7 +225,8 @@ export async function getDB(): Promise<DBData> {
           authSettings: {
             googleClientId: "",
             googleClientSecret: ""
-          }
+          },
+          coupons: []
         };
         await saveDB(defaultData);
         return defaultData;
@@ -339,15 +240,15 @@ export async function getDB(): Promise<DBData> {
   try {
     if (!fs.existsSync(DB_PATH)) {
       const defaultData: DBData = {
-        workspace: { name: "My Workspace", members: [{ id: "m1", email: "sarah.creator@acme.com", name: "Sarah Jenkins", role: "Owner", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150" }], settings: { dailyReplyQuota: 500, blockedUsers: [], spamProtection: true, slackWebhook: "", emailDigest: "weekly" } },
+        workspace: { name: "My Workspace", members: [], settings: { dailyReplyQuota: 500, blockedUsers: [], spamProtection: true, slackWebhook: "", emailDigest: "weekly" } },
         channels: [],
-        templates: DEFAULT_TEMPLATES,
-        rules: DEFAULT_RULES,
+        templates: [],
+        rules: [],
         comments: [],
-        activityLogs: [{ id: "log-creation", user: "Sarah Jenkins", action: "Initialized workspace settings", timestamp: new Date().toISOString() }],
+        activityLogs: [],
         userSession: {
-          email: "sarah.creator@acme.com",
-          name: "Sarah Jenkins",
+          email: "",
+          name: "Creator",
           tier: "free",
           repliesToday: 0,
           lastResetDate: new Date().toISOString().split("T")[0]
@@ -355,7 +256,8 @@ export async function getDB(): Promise<DBData> {
         authSettings: {
           googleClientId: "",
           googleClientSecret: ""
-        }
+        },
+        coupons: []
       };
       fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
       fs.writeFileSync(DB_PATH, JSON.stringify(defaultData, null, 2), "utf8");
@@ -367,8 +269,8 @@ export async function getDB(): Promise<DBData> {
     let dirty = false;
     if (!parsed.userSession) {
       parsed.userSession = {
-        email: "sarah.creator@acme.com",
-        name: "Sarah Jenkins",
+        email: "",
+        name: "Creator",
         tier: "free",
         repliesToday: 0,
         lastResetDate: new Date().toISOString().split("T")[0]
@@ -380,6 +282,10 @@ export async function getDB(): Promise<DBData> {
         googleClientId: "",
         googleClientSecret: ""
       };
+      dirty = true;
+    }
+    if (!parsed.coupons) {
+      parsed.coupons = [];
       dirty = true;
     }
 
@@ -400,13 +306,13 @@ export async function getDB(): Promise<DBData> {
     return {
       workspace: { name: "Error Workspace", members: [], settings: { dailyReplyQuota: 100, blockedUsers: [], spamProtection: true, slackWebhook: "", emailDigest: "weekly" } },
       channels: [],
-      templates: DEFAULT_TEMPLATES,
-      rules: DEFAULT_RULES,
+      templates: [],
+      rules: [],
       comments: [],
       activityLogs: [],
       userSession: {
-        email: "sarah.creator@acme.com",
-        name: "Sarah Jenkins",
+        email: "",
+        name: "Creator",
         tier: "free",
         repliesToday: 0,
         lastResetDate: new Date().toISOString().split("T")[0]
@@ -414,7 +320,8 @@ export async function getDB(): Promise<DBData> {
       authSettings: {
         googleClientId: "",
         googleClientSecret: ""
-      }
+      },
+      coupons: []
     };
   }
 }
@@ -456,7 +363,7 @@ export async function logActivity(user: string, action: string) {
   const db = await getDB();
   const newLog: ActivityLog = {
     id: `log-${Date.now()}`,
-    user,
+    user: user || "Creator",
     action,
     timestamp: new Date().toISOString()
   };
